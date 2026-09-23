@@ -94,11 +94,16 @@ re-roll a throw they do not like.
 
 ### Layers
 
-- `src/sim` — Rapier, pure, isomorphic, no rendering.
-- `src/rules` — teks, wagers, payouts, elimination. Pure.
-- `src/render` — three.js scene, piece meshes, replay, aim guide.
-- `src/ui` — Solid components.
-- `src/data` — the pamato roster.
+Everything about Teks lives under `src/games/teks` and `server/games/teks`.
+
+- `src/games/teks/sim` — Rapier, pure, isomorphic, no rendering.
+- `src/games/teks/rules` — teks, wagers, payouts, elimination. Pure.
+- `src/games/teks/render` — three.js scene, piece meshes, replay, aim guide.
+- `src/games/teks/ui` — Solid components for the table.
+- `src/games/teks/data` — the pamato roster.
+- `src/games/teks/protocol.ts`, `view.ts` — what a player may ask of the
+  table, and what the table tells them.
+- `server/games/teks` — the authoritative table and the bots.
 - `scripts/sim-trials.ts` — headless fairness and stability trials.
 
 ### The ground has no edge
@@ -362,22 +367,72 @@ up to six times, and only then read as whichever side is closer to up. Pogs
 roll and hit this far more often than cards do. It works, but it has not been
 weighed against making an edge landing mean something in the rules.
 
-## Networking
+## The platform
 
-### One game, one tunnel, one code
+Teks is the first of several Filipino games the project means to host, so the
+code is split into a platform that knows about games, rooms and seats, and the
+games themselves, which know how they are played.
 
-There are no rooms and no lobby. A host runs the server, exposes it with
-`cloudflared`, and hands out the link. Anyone who opens the link still has to
-type the join code, which is printed in the host's terminal and nowhere else.
+### Layout
 
-That is the whole of the access control, and it is meant to be. The game is
-played among people who already know each other, and the alternative is an
-account system nobody wants for a game of teks. Having the URL is not enough;
-hearing the code is.
+- `src/App.tsx` — the whole app: menu, a page per game, and the room.
+- `src/platform` — everything shared: the connection, routing, the remembered
+  name, the room protocol, and the menu, game page and invite screens.
+- `src/games/<id>` — one folder per game, holding its client.
+- `src/games/index.ts` — which client to mount for each game.
+- `server/rooms.ts` — rooms: codes, who is in them, passing messages on,
+  broadcasting, bots, and closing abandoned rooms.
+- `server/games/<id>` — one folder per game, holding its server table.
+- `server/games/index.ts` — which table to build for each game.
 
-A seat is claimed by name. If someone's connection drops they keep their seat
-and reclaim it by joining again with the same name, which matters because a
-round in progress cannot simply carry on without them.
+### Adding a game
+
+1. Add its id to `GAME_IDS` in `src/platform/protocol.ts`.
+2. Describe it in `src/platform/games.ts`, which is what the menu shows, and
+   give it a picture in `src/platform/GameArt.tsx`.
+3. Write its server table implementing `GameTable` from
+   `server/games/types.ts`, and register it in `server/games/index.ts`.
+4. Write its client, which receives the connection, the room and a way to
+   leave, and register it in `src/games/index.ts`.
+
+The platform never looks inside a game's messages. A game's client sends them
+with `sendGame`, they arrive at its table inside a `game` envelope, and the
+table checks them against its own schema. The table's view of the game reaches
+each player as a `state` message, and anything else it wants everyone to see,
+such as Teks's replay of a throw, as a message of its own type. The client
+reads the latest of each with `gameMessage(type)`.
+
+### No accounts
+
+Nobody signs in, because nothing is kept that would need one. A player is a
+name typed on their device, remembered in the browser so it does not have to
+be typed again. A room exists while somebody is in it and is thrown away two
+minutes after the last person leaves. Nothing is written to disk.
+
+### Rooms
+
+A room is one game, played or waiting to be, with a six-character code and a
+link of its own at `/room/CODE`. The code leaves out vowels so it can be read
+aloud without spelling.
+
+There are three ways into one. The host opens it from the game's page and is
+seated first. Someone can type the code into the same page, or open the link,
+which asks only for a name. And a room can be listed: the host chooses when
+opening it whether it is private, reachable only by code or link, or public,
+shown to everyone on the game's page under open lobbies until it starts or
+fills up. Private is the default, because most games are among people who
+already know each other.
+
+A seat is claimed by name. A dropped connection or a reload keeps the seat,
+and the tab rejoins it by itself, since it remembers which room and name it
+last sat down with. Leaving on purpose is different. In the lobby it gives the
+seat up, so the list of players is who is actually coming. Once the game is
+under way a bot takes the seat and plays it, so the others are not left
+waiting on someone who has gone, and the player can come back through the room
+link and take it over again.
+
+Links from before there were rooms carried the code as `?code=`, and still
+work: they are turned into the room's own address.
 
 ### The lobby
 
@@ -399,6 +454,12 @@ moment to seat a bot. The door now stays open until somebody says otherwise.
 Joining still closes once the game is under way. Letting people in mid-game
 means deciding what they start with and where their teks came from, which is a
 rules question rather than a plumbing one.
+
+Seat ids are counted rather than worked out from how many people are seated.
+Once people could leave the lobby, an id derived from the count was handed out
+a second time to the next arrival, and two players answering to one seat
+scrambled the table: the wrong boxes marked as "you", two launchers, and a
+round that never moved.
 
 ### The client is built in start mode
 
@@ -471,8 +532,11 @@ does not exploit the fact that a piece tends to keep the face it was stacked
 with, which a bot could do relentlessly and a person would find unbearable.
 
 A table of nothing but bots does not start. Joining closes once a game is under
-way, so a table that started by itself could never be joined, and seating three
-bots from the command line would lock everyone out of their own game.
+way, so a table that started by itself could never be joined.
+
+A room nobody is in does not play itself. Bots only take their turns while at
+least one person is present, so a room everyone has left sits still until
+someone comes back or it is closed.
 
 ### The replay is held back
 
@@ -502,8 +566,11 @@ round works: only the launcher touches it.
 - **M3 — over the tunnel.** Done. One hosted game, joined by link plus code.
   The server owns the game, runs the throw, and validates everything a client
   sends. Presence and turn ownership included.
-- **M4 — hardening and hosting.** What M3 left: the host has no way to start,
-  pause or reset a game except by restarting the process; a player who leaves
-  mid-round stalls it, since nothing times them out; and the game lives only in
-  memory, so a restart loses it. Deployment beyond a laptop and a tunnel also
-  belongs here.
+- **M4 — rooms and the platform.** Done. A menu of games, a page per game for
+  hosting, joining by code and browsing open lobbies, any number of rooms on
+  one server, and rejoining after a reload. A player who leaves mid-game hands
+  their seat to a bot rather than stalling the round.
+- **M5 — hardening and hosting.** Still open: a player whose connection drops
+  mid-round, rather than leaving, still stalls it, since nothing times them
+  out; rooms live only in memory, so a restart loses every game; and
+  deployment beyond a laptop and a tunnel.

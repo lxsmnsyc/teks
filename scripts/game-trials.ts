@@ -8,14 +8,14 @@
  *
  * Run it with `pnpm game:trials`.
  */
-import { getPamato } from '~/data/pamatos';
+import { getPamato } from '~/games/teks/data/pamatos';
 import {
   createPlayers,
   livePlayers,
   pickLauncher,
   roundPieces,
-} from '~/rules/game';
-import type { Player } from '~/rules/round';
+} from '~/games/teks/rules/game';
+import type { Player } from '~/games/teks/rules/round';
 import {
   STARTING_TEKS,
   findGameWinner,
@@ -23,16 +23,16 @@ import {
   maxWager,
   needsPanabla,
   settleRound,
-} from '~/rules/round';
-import { createRng } from '~/sim/rng';
-import { runThrow } from '~/sim/run';
+} from '~/games/teks/rules/round';
+import { createRng } from '~/games/teks/sim/rng';
+import { runThrow } from '~/games/teks/sim/run';
 import {
   ARENA_HALF_SIZE,
   STACK_ORIGIN,
   TILT_MAX,
   TILT_MIN,
-} from '~/sim/constants';
-import type { SimPiece } from '~/sim/types';
+} from '~/games/teks/sim/constants';
+import type { SimPiece } from '~/games/teks/sim/types';
 
 const GAMES = Number(process.env.GAMES ?? 12);
 /** A game that runs this long is not going to finish. */

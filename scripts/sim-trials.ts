@@ -8,16 +8,16 @@
  *
  * Run it with `pnpm sim:trials`.
  */
-import { PAMATOS } from '~/data/pamatos';
-import { judgeRound } from '~/rules/round';
+import { PAMATOS } from '~/games/teks/data/pamatos';
+import { judgeRound } from '~/games/teks/rules/round';
 import {
   ARENA_HALF_SIZE,
   STACK_ORIGIN,
   TILT_MAX,
   TILT_MIN,
-} from '~/sim/constants';
-import { runThrow } from '~/sim/run';
-import type { SimPiece, StackEntry } from '~/sim/types';
+} from '~/games/teks/sim/constants';
+import { runThrow } from '~/games/teks/sim/run';
+import type { SimPiece, StackEntry } from '~/games/teks/sim/types';
 
 const RUNS = Number(process.env.RUNS ?? 300);
 

@@ -1,53 +1,46 @@
-# Teks
+# Laro
 
-A multiplayer game of teks. Players stack their pamatos, one of them throws the
-stack, and the odd face out wins the round.
+Filipino games to play together in the browser. The first is Teks: players
+stack their pamatos, one of them throws the stack, and the odd face out wins
+the round.
 
 See [DESIGN.md](./DESIGN.md) for the rules, the architecture and the open
 questions.
 
 ## Status
 
-Milestone 3: a whole game played over a tunnel. The host runs the server and
-shares the link; anyone who opens it needs the join code to sit down. The
-server owns the game and simulates the throws, so no client decides anything.
+A menu of games, rooms that anyone can host, and a whole game of Teks played
+across them. There are no accounts: a player is a name typed on their device.
+The server owns every game and simulates the throws, so no client decides
+anything.
 
-## Hosting a game
+## Hosting
 
 ```sh
 pnpm install
-pnpm host      # builds the client, then serves game and app on :8787
+pnpm host      # builds the client, then serves everything on :8787
 pnpm tunnel    # in another terminal: exposes it with cloudflared
 ```
 
-Starting the server prints the code and two links:
+Open the address, pick a game, put in a name and host a room. The room has a
+six-character code and a link of its own, both shown in the lobby. Send the
+link, or read the code out; anyone with either can sit down. A room can also
+be made public when it is opened, which lists it under open lobbies on the
+game's page for anyone to join.
 
-```
-  Join code   KSXCDP
-  Open        http://localhost:8787/?code=KSXCDP
-  Or share    http://localhost:8787  and read the code out
-```
+Whoever opens the room is its host. Everyone picks a colour, the host sets the
+starting teks and seats any bots, and the game begins when the host starts it.
+Teks needs three players and seats six; joining closes once the game is under
+way. To play alone, seat some bots from the lobby.
 
-The first link fills the code in for you, which is what you want when testing
-on your own machine. The second is the careful one: sharing it on its own means
-the code still has to be passed on separately. The code is also shown in the
-lobby once you are seated, so you can read it out from there.
-
-Set your own with `JOIN_CODE=TEKS01 pnpm host`, which saves looking it up every
-restart while working on the game.
-
-The first person to sit down is the host. Everyone picks a colour, the host
-sets the starting teks and seats any bots, and the game begins when the host
-starts it. Three players are needed and six can play; joining closes once the
-game is under way.
-
-To play alone, seat some bots from the lobby. `BOTS=2 pnpm server` seats them
-up front instead.
+A reload or a dropped connection puts the player back in their seat. Leaving
+on purpose gives the seat up in the lobby, or hands it to a bot mid-game, and
+opening the room link again takes it back.
 
 ## Working on it
 
 ```sh
-JOIN_CODE=TEKS01 pnpm dev
+pnpm dev
 ```
 
 One process on one port, the same as when hosting. In development the client
@@ -55,21 +48,26 @@ is compiled on demand by Vite running inside the server, so hot reloading works
 without a second process or a proxy between them. Changes to anything under
 `server/` need a restart; changes to the client do not.
 
-Open http://localhost:8787/?code=TEKS01 in a couple of browser windows, or one
-window and some bots, to play both sides of a game.
+Open http://localhost:8787 in a couple of browser windows, or one window and
+some bots, to play both sides of a game.
+
+The code is split into a platform, under `src/platform` and `server/rooms.ts`,
+and one folder per game under `src/games` and `server/games`. DESIGN.md has the
+steps for adding a game.
 
 ## Scripts
 
-| Script            | What it does                                       |
-| ----------------- | -------------------------------------------------- |
-| `pnpm dev`        | Vite dev server on port 3000                       |
-| `pnpm build`      | Production build                                   |
-| `pnpm host`       | Build the client, then serve game and app on :8787 |
-| `pnpm tunnel`     | Expose :8787 through a cloudflared quick tunnel    |
-| `pnpm type-check` | `tsgo --noEmit`                                    |
-| `pnpm lint`       | oxlint, type-aware                                 |
-| `pnpm format`     | oxfmt                                              |
-| `pnpm sim:trials` | Headless throw trials: fairness, stability, timing |
+| Script             | What it does                                        |
+| ------------------ | --------------------------------------------------- |
+| `pnpm dev`         | Server with the client compiled on demand, on :8787 |
+| `pnpm build`       | Production build                                    |
+| `pnpm host`        | Build the client, then serve game and app on :8787  |
+| `pnpm tunnel`      | Expose :8787 through a cloudflared quick tunnel     |
+| `pnpm type-check`  | `tsgo --noEmit`                                     |
+| `pnpm lint`        | oxlint, type-aware                                  |
+| `pnpm format`      | oxfmt                                               |
+| `pnpm sim:trials`  | Headless throw trials: fairness, stability, timing  |
+| `pnpm game:trials` | Whole games between simulated players               |
 
 `pnpm sim:trials` is the one worth knowing about. It runs hundreds of throws
 without a browser and reports how often a throw produced a winner, how often a
