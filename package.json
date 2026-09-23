@@ -1,0 +1,44 @@
+{
+  "name": "teks",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm server:build && DEV=1 node dist-server/main.js",
+    "build": "vite build",
+    "preview": "vite preview",
+    "type-check": "tsgo --noEmit",
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "sim:trials": "vite build --config vite.server.config.ts --ssr scripts/sim-trials.ts --outDir node_modules/.sim-trials --logLevel error && node node_modules/.sim-trials/sim-trials.js",
+    "game:trials": "vite build --config vite.server.config.ts --ssr scripts/game-trials.ts --outDir node_modules/.game-trials --logLevel error && node node_modules/.game-trials/game-trials.js",
+    "server:build": "vite build --config vite.server.config.ts --ssr server/main.ts --outDir dist-server --logLevel error",
+    "server": "pnpm server:build && node dist-server/main.js",
+    "host": "pnpm build && pnpm server",
+    "tunnel": "cloudflared tunnel --url http://localhost:8787"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.20.0",
+    "@solidjs/router": "2.0.0-next.26",
+    "@solidjs/web": "2.0.0-rc.9",
+    "solid-js": "2.0.0-rc.9",
+    "three": "^0.186.0",
+    "valibot": "^1.5.0",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@solidjs/vite-plugin": "3.0.0-next.44",
+    "@types/node": "^26.6.2",
+    "@types/three": "^0.186.0",
+    "@types/ws": "^8.18.1",
+    "@typescript/native-preview": "latest",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "oxlint-tsgolint": "^7.0.2002",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  },
+  "packageManager": "pnpm@10.34.4"
+}
